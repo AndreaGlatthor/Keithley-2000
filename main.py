@@ -40,7 +40,10 @@ result = instrument.query("READ?") # Perform a measurement
 print("Measurement result:", result)
 
 # --- Three-line scan loop ---
-interval_seconds = 20  # Change this value to adjust the scan interval
+# Change the interval_seconds variable to adjust the scan interval.
+# The actual interval will be slightly longer due to command execution time.
+# 19 seconds give approximately a measurement interval of 20 seconds.
+interval_seconds = 19  
 output_files = ["line1.txt", "line2.txt", "line3.txt"]
 
 try:
