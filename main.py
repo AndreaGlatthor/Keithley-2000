@@ -19,6 +19,8 @@ instrument.timeout = 10000  # 10 seconds
 
 instrument.write_termination = "\r"
 instrument.read_termination = "\r"
+instrument.write("*IDN?")
+print("Instrument identification:", instrument.read())  
 
 # --- Send initialization and measurement commands ---
 instrument.write("*RST") # Reset the instrument
