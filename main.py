@@ -1,4 +1,3 @@
-
 import pyvisa
 import time
 
@@ -18,25 +17,56 @@ instrument.parity = pyvisa.constants.Parity.none
 instrument.flow_control = pyvisa.constants.ControlFlow.none  # Set flow control to none
 instrument.timeout = 10000  # 10 seconds
 
-# Set required line terminators for Keithley 2000
 instrument.write_termination = "\r"
 instrument.read_termination = "\r"
 
-
 # --- Send initialization and measurement commands ---
-commands = "*RST.*WAI.*SRE 1.SYST:RWL.SENS:FUNC 'Volt:DC'.SYST:AZER:STAT 0.SENS:VOLT:DC:AVER:STAT 0.SENS:VOLT:DC:NPLC 10.SENS:VOLT:DC:RANG:AUTO 1.SENS:VOLT:DC:DIG 7.SENS:Volt:DC:REF:STAT 0.ROUT:OPEN:ALL.:route:close (@1).READ?"
+instrument.write("*RST") # Reset the instrument
+instrument.write("*WAI") # Wait for previous operations to complete
+instrument.write("SRE 1") # Enable service request on operation complete
+instrument.write("SYST:RWL") # Enable remote lockout
+instrument.write("SENS:FUNC 'Volt:DC'") # Set function to DC Voltage
+instrument.write("SYST:AZER:STAT 0") # Disable auto zero
+instrument.write("SENS:VOLT:DC:AVER:STAT 0") # Disable averaging
+instrument.write("SENS:VOLT:DC:NPLC 10") # Set number of power line cycles to 10
+instrument.write("SENS:VOLT:DC:RANG:AUTO 1") # Enable auto range
+instrument.write("SENS:VOLT:DC:DIG 7") # Set resolution to 7 digits
+instrument.write("SENS:Volt:DC:REF:STAT 0") # Disable reference junction compensation
+instrument.write("ROUT:OPEN:ALL") # Open all channels
+instrument.write("ROUT:CLOS (@1)") # Close channel 1
+result = instrument.query("READ?") # Perform a measurement
+print("Measurement result:", result)
+
+# --- Three-line scan loop ---
+interval_seconds = 20  # Change this value to adjust the scan interval
+output_files = ["line1.txt", "line2.txt", "line3.txt"]
 
 try:
-    cmd_list = commands.split('.')
-    for cmd in cmd_list[:-1]:
-        if cmd.strip():
-            print(f"Sending: {cmd}")
-            instrument.write(cmd)
-            time.sleep(0.05)
-    # The last command is READ? (query)
-    last_cmd = cmd_list[-1]
-    print(f"Querying: {last_cmd}")
-    result = instrument.query(last_cmd)
-    print("Measurement result:", result)
+    print("Starting scan loop. Press Ctrl+C to stop.")
+    while True:
+        for channel in range(1, 4):
+            try:
+                instrument.write("*SRE 1") # Enable service request on operation complete
+                instrument.write("SENS:FUNC 'Volt:DC'") # Set function to DC Voltage
+                instrument.write("ROUT:OPEN:ALL") # Open all channels
+                instrument.write(f"ROUT:CLOS (@{channel})") # Close the current channel
+                time.sleep(0.3)  # Wait a bit between commands
+                result = instrument.query("READ?") # Perform a measurement
+                print(f"Channel {channel}: Measurement result: {result.strip()}")
+                
+                # Append result to corresponding file
+                with open(output_files[channel - 1], "a") as f:
+                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                    f.write(f"{timestamp}, {result.strip()}\n")
+            except Exception as e:
+                print(f"Error with channel {channel}: {e}")
+        print(f"Waiting for {interval_seconds} seconds before next scan...")
+        time.sleep(interval_seconds)
+except KeyboardInterrupt:
+    print("Scan loop stopped by user.")
 except Exception as e:
-    print("Instrument did not respond or timed out. Details:", e)
+    print("An error occurred:", e)
+finally:
+    instrument.write("ROUT:OPEN:ALL") # Open all channels before exiting
+    instrument.close()
+    print("Instrument connection closed.")
