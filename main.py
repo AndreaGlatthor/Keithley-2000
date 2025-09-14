@@ -48,6 +48,7 @@ output_files = ["line1.txt", "line2.txt", "line3.txt"]
 
 try:
     print("Starting scan loop. Press Ctrl+C to stop.")
+    start_time = time.time()
     while True:
         for channel in range(1, 4):
             try:
@@ -58,11 +59,14 @@ try:
                 time.sleep(0.05)  # Wait a bit between commands
                 result = instrument.query("READ?") # Perform a measurement
                 print(f"Channel {channel}: Measurement result: {result.strip()}")
-                
+
+                # Calculate elapsed time in hours since start
+                elapsed_seconds = time.time() - start_time
+                elapsed_hours = elapsed_seconds / 3600.0
+
                 # Append result to corresponding file
                 with open(output_files[channel - 1], "a") as f:
-                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                    f.write(f"{timestamp}, {result.strip()}\n")
+                    f.write(f"{elapsed_hours:.6f}, {result.strip()}\n")
             except Exception as e:
                 print(f"Error with channel {channel}: {e}")
         print(f"Waiting for {interval_seconds} seconds before next scan...")
