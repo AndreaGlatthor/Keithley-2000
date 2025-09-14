@@ -9,6 +9,8 @@ The program is written in Python (version 3.13) and uses the PyVISA library to c
 
 See the pyvisa docs for more information about the needed backend: [https://pyvisa.readthedocs.io/en/latest/](https://pyvisa.readthedocs.io/en/latest/). I use NI-VISA and work on a Microsoft Windows 11 laptop.
 
+## Output file format
+
 The output file is a simple text file with comma-separated values, one measurement per line:
 
 ```text
