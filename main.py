@@ -50,7 +50,7 @@ try:
             try:
                 instrument.write("*SRE 1") # Enable service request on operation complete
                 instrument.write("SENS:FUNC 'Volt:DC'") # Set function to DC Voltage
-                instrument.write("ROUT:OPEN:ALL") # Open all channels
+                instrument.write("ROUT:OPEN:ALL") # Open all channels. If I open just the current channel, the instrument beeps every time at this point in the loop.
                 instrument.write(f"ROUT:CLOS (@{channel})") # Close the current channel
                 time.sleep(0.05)  # Wait a bit between commands
                 result = instrument.query("READ?") # Perform a measurement
@@ -69,6 +69,6 @@ except KeyboardInterrupt:
 except Exception as e:
     print("An error occurred:", e)
 finally:
-    instrument.write("ROUT:OPEN:ALL") # Open all channels before exiting
-    instrument.close()
+    instrument.write("ROUT:CLOS:ALL") # Close all channels before exiting
+    instrument.close() # Close the instrument connection and free the resource. 
     print("Instrument connection closed.")
