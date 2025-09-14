@@ -15,7 +15,7 @@ instrument.data_bits = 8
 instrument.stop_bits = pyvisa.constants.StopBits.one
 instrument.parity = pyvisa.constants.Parity.none
 instrument.flow_control = pyvisa.constants.ControlFlow.none  # Set flow control to none
-instrument.timeout = 10000  # 10 seconds
+instrument.timeout = 5000  # 5 seconds
 
 instrument.write_termination = "\r"
 instrument.read_termination = "\r"
@@ -52,7 +52,7 @@ try:
                 instrument.write("SENS:FUNC 'Volt:DC'") # Set function to DC Voltage
                 instrument.write("ROUT:OPEN:ALL") # Open all channels
                 instrument.write(f"ROUT:CLOS (@{channel})") # Close the current channel
-                time.sleep(0.3)  # Wait a bit between commands
+                time.sleep(0.05)  # Wait a bit between commands
                 result = instrument.query("READ?") # Perform a measurement
                 print(f"Channel {channel}: Measurement result: {result.strip()}")
                 
