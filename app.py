@@ -13,8 +13,15 @@ import time
 today_str = datetime.now().strftime("%Y-%m-%d")
 
 
+# Kalibrierkonstanten für die drei Kanäle
+CAL_FACTORS = [12.45, 12.3151, 12.9117]
+
+
 # --- Messroutine als Funktion ---
-def run_measurement(filenames, interval_seconds):
+def run_measurement(filenames, interval_seconds, weights):
+    import pyvisa
+    import time
+
     rm = pyvisa.ResourceManager()
     resource_str = "ASRL1::INSTR"  # ASRL1 usually maps to COM1
     instrument = rm.open_resource(resource_str)
@@ -59,11 +66,27 @@ def run_measurement(filenames, interval_seconds):
                     time.sleep(0.05)
                     result = instrument.query("READ?")
 
+                    # Messwert als float
+                    try:
+                        value = float(result.strip())
+                    except Exception:
+                        value = None
+
+                    # Kalibrierung und Division durch Einwaage
+                    if value is not None and weights[channel - 1] is not None:
+                        calibrated = value * CAL_FACTORS[channel - 1]
+                        try:
+                            normed = calibrated / weights[channel - 1]
+                        except Exception:
+                            normed = ""
+                    else:
+                        normed = ""
+
                     elapsed_seconds = time.time() - start_time
                     elapsed_hours = elapsed_seconds / 3600.0
 
                     with open(filenames[channel - 1], "a") as f:
-                        f.write(f"{elapsed_hours:.6f}, {result.strip()}\n")
+                        f.write(f"{elapsed_hours:.6f}, {result.strip()}, {calibrated:.6f}, {normed}\n")
                 except Exception as e:
                     print(f"Error with channel {channel}: {e}")
             time.sleep(interval_seconds)
@@ -232,16 +255,24 @@ app.layout = dbc.Container(
         State("filename2", "value"),
         State("filename3", "value"),
         State("interval-input", "value"),
+        State("weight1", "value"),
+        State("weight2", "value"),
+        State("weight3", "value"),
     ],
     prevent_initial_call=True,
 )
-def start_measurement(n_clicks, filename1, filename2, filename3, interval):
+def start_measurement(n_clicks, filename1, filename2, filename3, interval, w1, w2, w3):
     if n_clicks > 0:
-        # Starte Messroutine in separatem Thread, damit das UI nicht blockiert
+        # Einwaagen als float (deutsche Kommaschreibweise berücksichtigen)
+        def parse_weight(val):
+            try:
+                return float(str(val).replace(",", "."))
+            except Exception:
+                return None
+        weights = [parse_weight(w1), parse_weight(w2), parse_weight(w3)]
         filenames = [filename1, filename2, filename3]
-        thread = threading.Thread(
-            target=run_measurement, args=(filenames, interval - 1)
-        )
+        import threading
+        thread = threading.Thread(target=run_measurement, args=(filenames, interval - 1, weights))
         thread.daemon = True
         thread.start()
         return "Messung läuft..."
