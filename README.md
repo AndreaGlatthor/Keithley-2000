@@ -10,7 +10,7 @@ The calorimeter has one reference cell and three measuring cells. The difference
 The program is written in Python (version 3.13) and uses the PyVISA library to communicate with the multimeter via this USB-to-Serial adaptor: [Techconnect USB SERIAL ADAPTOR: https://visionaudiovisual.com/en/product/tc-usbser](https://visionaudiovisual.com/en/product/tc-usbser).
 
 See the pyvisa docs for more information about the needed backend: [https://pyvisa.readthedocs.io/en/latest/](https://pyvisa.readthedocs.io/en/latest/), I use NI-VISA. I use a Windows 11 ThinkPad X1 and a MacBook Air (M4, 2025) for my work.
-## Output file format
+## Output file format of main.py
 
 The output file is a simple text file with comma-separated values, one measurement per line:
 
