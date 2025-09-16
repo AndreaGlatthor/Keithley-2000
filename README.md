@@ -2,7 +2,7 @@
 
 I operate a heat flow calorimeter on a Keithley 2000 multimeter with a scanner card.
 
-My goal is to create a container app that runs in a browser. In addition to displaying the raw data, it should show the measurement curve in real time. The calibration constants of the three measuring stations must be considered to display the measurement result directly in mW/g.
+My goal is to create a container app that runs in a browser. In addition to displaying the raw data, it should show the measurement curve in real time. I will implement this using Dash/Plotly. The calibration constants of the three measuring stations must be considered to display the measurement result directly in mW/g.
 
 Instrument identification: KEITHLEY INSTRUMENTS INC.,MODEL 2000,1103202,A19  /A02
 
