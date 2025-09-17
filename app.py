@@ -6,16 +6,17 @@ import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime
 import threading
-import pyvisa
-import time
 
-today_str = datetime.now().strftime("%Y-%m-%d")
+# Dateinamen beginnen alle mit dem Datum in der Form 2025-09-17 (heutiges Datum)
+today_str = datetime.now().strftime("%Y-%m-%d")     
 
 # Kalibrierkonstanten für die drei Kanäle
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
 
 
 def run_measurement(filenames, interval_seconds, weights):
+    import pyvisa
+    import time
 
     rm = pyvisa.ResourceManager()
     resources = rm.list_resources()
@@ -56,8 +57,10 @@ def run_measurement(filenames, interval_seconds, weights):
 
     try:
         start_time = time.time()
-        while True:
+        while not stop_flag.is_set():
             for channel in range(1, 4):
+                if stop_flag.is_set():
+                    break
                 try:
                     instrument.write("*SRE 1")
                     instrument.write("SENS:FUNC 'Volt:DC'")
@@ -70,7 +73,6 @@ def run_measurement(filenames, interval_seconds, weights):
                     try:
                         value = float(result.strip())
                     except Exception:
-                        print(f"Could not convert result to float: '{result.strip()}'")
                         value = None
 
                     # Kalibrierung und Division durch Einwaage
@@ -117,7 +119,6 @@ app.layout = dbc.Container(
         ),
         dbc.Row(
             [
-                # Linke Spalte: Input-Bereich
                 dbc.Col(
                     [
                         dbc.Card(
@@ -219,6 +220,22 @@ app.layout = dbc.Container(
                                                         className="mt-2",
                                                         n_clicks=0,
                                                         style={"width": "100%"},
+                                                        disabled=False,  # Initialzustand: aktiv
+                                                    )
+                                                )
+                                            ]
+                                        ),
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dbc.Button(
+                                                        "Stop",
+                                                        id="stop-button",
+                                                        color="danger",
+                                                        className="mt-2",
+                                                        n_clicks=0,
+                                                        style={"width": "100%"},
+                                                        disabled=False,
                                                     )
                                                 )
                                             ]
@@ -246,14 +263,26 @@ app.layout = dbc.Container(
             ]
         ),
         html.Div(id="run-status", className="mt-3", style={"fontWeight": "bold"}),
+        dcc.Store(id="measurement-running", data=False),  # Status-Flag
+        dcc.Store(id="stop-requested", data=False),
     ],
     fluid=True,
 )
 
+# Globale Variable für Thread und Stop-Flag
+measurement_thread = None
+stop_flag = threading.Event()
+
 
 @app.callback(
-    Output("run-status", "children"),
-    Input("run-button", "n_clicks"),
+    [
+        Output("run-status", "children"),
+        Output("run-button", "disabled"),
+        Output("stop-button", "disabled"),
+        Output("measurement-running", "data"),
+        Output("stop-requested", "data"),
+    ],
+    [Input("run-button", "n_clicks"), Input("stop-button", "n_clicks")],
     [
         State("filename1", "value"),
         State("filename2", "value"),
@@ -262,12 +291,35 @@ app.layout = dbc.Container(
         State("weight1", "value"),
         State("weight2", "value"),
         State("weight3", "value"),
+        State("measurement-running", "data"),
+        State("stop-requested", "data"),
     ],
     prevent_initial_call=True,
 )
-def start_measurement(n_clicks, filename1, filename2, filename3, interval, w1, w2, w3):
-    if n_clicks > 0:
-        # Einwaagen als float (deutsche Kommaschreibweise berücksichtigen)
+def control_measurement(
+    run_clicks,
+    stop_clicks,
+    filename1,
+    filename2,
+    filename3,
+    interval,
+    w1,
+    w2,
+    w3,
+    running,
+    stop_requested,
+):
+    global measurement_thread, stop_flag
+
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise dash.exceptions.PreventUpdate
+
+    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if button_id == "run-button" and not running:
+        stop_flag.clear()
+
         def parse_weight(val):
             try:
                 return float(str(val).replace(",", "."))
@@ -276,15 +328,20 @@ def start_measurement(n_clicks, filename1, filename2, filename3, interval, w1, w
 
         weights = [parse_weight(w1), parse_weight(w2), parse_weight(w3)]
         filenames = [filename1, filename2, filename3]
-        import threading
-
-        thread = threading.Thread(
+        measurement_thread = threading.Thread(
             target=run_measurement, args=(filenames, interval - 1, weights)
         )
-        thread.daemon = True
-        thread.start()
-        return "Messung läuft..."
-    return ""
+        measurement_thread.daemon = True
+        measurement_thread.start()
+        return "Messung läuft...", True, False, True, False
+
+    if button_id == "stop-button" and running:
+        stop_flag.set()
+        return "Messung gestoppt.", False, True, False, True
+
+    if running:
+        return "Messung läuft...", True, False, True, False
+    return "", False, True, False, False
 
 
 if __name__ == "__main__":
