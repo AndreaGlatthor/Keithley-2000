@@ -3,7 +3,6 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
-import pandas as pd
 from datetime import datetime
 import threading
 import os
@@ -39,7 +38,7 @@ def run_measurement(filenames, interval_seconds, weights):
     instrument.read_termination = "\r"
     instrument.write("*RST")
     instrument.write("*WAI")
-    instrument.write("SRE 1")
+    instrument.write("SRE 1")   # Instruments beeps
     instrument.write("SYST:RWL")
     instrument.write("SENS:FUNC 'Volt:DC'")
     instrument.write("SYST:AZER:STAT 0")
@@ -90,7 +89,7 @@ def run_measurement(filenames, interval_seconds, weights):
 
                     with open(filenames[channel - 1], "a") as f:
                         f.write(
-                            f"{elapsed_hours:.6f}, {result.strip()}, {calibrated if calibrated != '' else ''}, {normed}\n"
+                            f"{elapsed_hours:.5f}, {normed}\n"  # Save only time and normed data (mW per gram)
                         )
                 except Exception as e:
                     print(f"Error with channel {channel}: {e}")
@@ -310,10 +309,10 @@ def read_measurement_data(filenames):
             with open(fname, "r") as f:
                 for line in f:
                     parts = line.strip().split(",")
-                    if len(parts) >= 4:
+                    if len(parts) == 2:
                         try:
                             t = float(parts[0])
-                            n = float(parts[3])
+                            n = float(parts[1])
                             times.append(t)
                             normed.append(n)
                         except Exception:
