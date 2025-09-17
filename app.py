@@ -8,10 +8,10 @@ from datetime import datetime
 import threading
 import os
 
-# Dateinamen beginnen alle mit dem Datum und Uhrzeit in der Form 2025-09-17_14-23
+# Filenames all start with the date and time in the format 2025-09-17_14-23
 now_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
-# Kalibrierkonstanten für die drei Kanäle
+# Calibration constants for the three channels
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
 
 
@@ -59,9 +59,9 @@ def run_measurement(filenames, interval_seconds, weights):
             for channel in range(1, 4):
                 if stop_flag.is_set():
                     break
-                # Prüfe, ob für diesen Kanal eine Einwaage angegeben ist
+                # Check if a weight is specified for this channel
                 if weights[channel - 1] is None:
-                    continue  # Keine Einwaage → keine Messung/kein Schreiben
+                    continue  # No weight → no measurement/no writing
                 try:
                     instrument.write("*SRE 1")
                     instrument.write("SENS:FUNC 'Volt:DC'")
@@ -126,7 +126,7 @@ app.layout = dbc.Container(
                                     [
                                         dbc.Row(
                                             [
-                                                # Dateinamen untereinander (links)
+                                                # Filenames stacked (left)
                                                 dbc.Col(
                                                     [
                                                         html.Label(
@@ -162,12 +162,10 @@ app.layout = dbc.Container(
                                                     ],
                                                     width=7,
                                                 ),
-                                                # Einwaagen untereinander (rechts)
+                                                # Weights stacked (right)
                                                 dbc.Col(
                                                     [
-                                                        html.Label(
-                                                            "Weight 1 (g)"
-                                                        ),
+                                                        html.Label("Weight 1 (g)"),
                                                         dcc.Input(
                                                             id="weight1",
                                                             type="number",
@@ -175,9 +173,7 @@ app.layout = dbc.Container(
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
-                                                        html.Label(
-                                                            "Weight 2 (g)"
-                                                        ),
+                                                        html.Label("Weight 2 (g)"),
                                                         dcc.Input(
                                                             id="weight2",
                                                             type="number",
@@ -185,9 +181,7 @@ app.layout = dbc.Container(
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
-                                                        html.Label(
-                                                            "Weight 3 (g)"
-                                                        ),
+                                                        html.Label("Weight 3 (g)"),
                                                         dcc.Input(
                                                             id="weight3",
                                                             type="number",
@@ -255,8 +249,8 @@ app.layout = dbc.Container(
                                                         style={
                                                             "width": "100%",
                                                             "opacity": "0.2",
-                                                        },  # opacity 0.2 auch im Layout
-                                                        disabled=True,  # Vor dem Start deaktiviert
+                                                        },  # opacity 0.2 also in layout
+                                                        disabled=True,  # Disabled before start
                                                     )
                                                 )
                                             ]
@@ -276,7 +270,7 @@ app.layout = dbc.Container(
                     ],
                     width=4,
                 ),
-                # Rechte Spalte: Graph
+                # Right column: Graph
                 dbc.Col(
                     [
                         dbc.Card(
@@ -292,21 +286,21 @@ app.layout = dbc.Container(
             ]
         ),
         html.Div(id="run-status", className="mt-3", style={"fontWeight": "bold"}),
-        dcc.Store(id="measurement-running", data=False),  # Status-Flag
+        dcc.Store(id="measurement-running", data=False),  # Status flag
         dcc.Store(id="stop-requested", data=False),
         dcc.Interval(
-            id="graph-update-interval", interval=2000, n_intervals=0
-        ),  # alle 2 Sekunden aktualisieren
+            id="graph-update-interval", interval=3000, n_intervals=0  # interval in ms, update every 3 seconds
+        ), 
     ],
-    fluid=False,  # <--- Ändere fluid auf False, damit die Breite begrenzt ist
+    fluid=False,
     style={
         "maxWidth": "1200px",
         "margin": "auto",
-    },  # <--- Optional: Maximalbreite und zentriert
+    },
 )
 
 
-# Hilfsfunktion: Lese aktuelle Messdaten aus den Dateien
+# Helper function: Read current measurement data from files
 def read_measurement_data(filenames):
     data = []
     for fname in filenames:
@@ -328,7 +322,7 @@ def read_measurement_data(filenames):
     return data
 
 
-# Globale Variable für Thread und Stop-Flag
+# Global variable for thread and stop flag
 measurement_thread = None
 stop_flag = threading.Event()
 
@@ -416,7 +410,7 @@ def control_measurement(
             "",
             True,
             run_style_disabled,
-            False,  # Stop-Button jetzt aktiv
+            False,  # Stop button now active
             stop_style_active,
             True,
             False,
@@ -430,7 +424,7 @@ def control_measurement(
             "",
             False,
             run_style_active,
-            True,  # Stop-Button wieder deaktiviert
+            True,  # Stop button disabled again
             stop_style_disabled,
             False,
             True,
@@ -443,7 +437,7 @@ def control_measurement(
             "",
             True,
             run_style_disabled,
-            False,  # Stop-Button aktiv während Messung
+            False,  # Stop button active during measurement
             stop_style_active,
             True,
             False,
@@ -454,7 +448,7 @@ def control_measurement(
         "",
         False,
         run_style_active,
-        True,  # Stop-Button bleibt deaktiviert vor Start
+        True,  # Stop button remains disabled before start
         stop_style_disabled,
         False,
         False,
@@ -478,7 +472,7 @@ def update_graph(n, filename1, filename2, filename3):
     fig = go.Figure()
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
 
-    # Finde das Minimum aller normed-Werte
+    # Find the minimum of all normed values
     all_normed = []
     for times, normed in data:
         all_normed.extend(normed)
@@ -498,22 +492,22 @@ def update_graph(n, filename1, filename2, filename3):
     fig.update_layout(
         xaxis=dict(
             title="Time (h)",
-            range=[0, None],  # x-Achse startet bei 0
+            range=[0, None],  # x-axis starts at 0
             showline=True,
             linecolor="black",
             linewidth=2,
-            mirror=False,  # Nur Achse bei x=0
+            mirror=False,  # Only axis at x=0
         ),
         yaxis=dict(
             title="Heat flow (mW/g)",
-            range=[y_min, None],  # y-Achse startet beim Minimum
+            range=[y_min, None],  # y-axis starts at minimum
             showline=True,
             linecolor="black",
             linewidth=2,
-            mirror=False,  # Nur Achse bei y=0
+            mirror=False,  # Only axis at y=0
         ),
         template="plotly_white",
-        legend_title="Kanal",
+        legend_title="Channel",
         margin=dict(l=40, r=20, t=40, b=40),
     )
     return fig
