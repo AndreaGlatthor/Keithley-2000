@@ -43,6 +43,7 @@ Click the link (ctrl + click) or open a browser and go to `http://127.0.0.1:8050
 - Select a directory where the csv files will be saved (only existing directories are listed, USB flash drives D, E or F are supported). 
 - Set the measurement point spacing in seconds (default is 20 seconds).
 - Click the Run button to start the measurement. The Stop button is disabled until you start the measurement.
+- The graph on the right will show the measurements in real time.
 
 ![Screenshot of the Keithley 2000 Monitor web application interface. On the left, a form allows users to input filenames and weights for three channels, set measurement point spacing in seconds, and select a directory for CSV files. The Run button is active, while the Stop button is disabled. Below the directory selection, a red warning message states that only existing directories are listed and USB flash drives D, E, or F are supported. On the right, a blank graph is displayed with axes labeled Heat flow in milliwatts per gram and Time in hours. The overall environment is clean and functional, designed for scientific data acquisition and monitoring.](image.png)
 
