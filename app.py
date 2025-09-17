@@ -7,17 +7,11 @@ import pandas as pd
 from datetime import datetime
 import threading
 
-import pyvisa
-import time
-
 today_str = datetime.now().strftime("%Y-%m-%d")
-
 
 # Kalibrierkonstanten für die drei Kanäle
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
 
-
-# --- Messroutine als Funktion ---
 def run_measurement(filenames, interval_seconds, weights):
     import pyvisa
     import time
@@ -25,7 +19,6 @@ def run_measurement(filenames, interval_seconds, weights):
     rm = pyvisa.ResourceManager()
     resource_str = "ASRL1::INSTR"  # ASRL1 usually maps to COM1
     instrument = rm.open_resource(resource_str)
-
     # Set serial communication parameters
     instrument.baud_rate = 9600
     instrument.data_bits = 8
@@ -33,10 +26,8 @@ def run_measurement(filenames, interval_seconds, weights):
     instrument.parity = pyvisa.constants.Parity.none
     instrument.flow_control = pyvisa.constants.ControlFlow.none
     instrument.timeout = 5000  # 5 seconds
-
     instrument.write_termination = "\r"
     instrument.read_termination = "\r"
-
     # --- Send initialization and measurement commands ---
     instrument.write("*RST")
     instrument.write("*WAI")
@@ -70,6 +61,7 @@ def run_measurement(filenames, interval_seconds, weights):
                     try:
                         value = float(result.strip())
                     except Exception:
+                        print(f"Could not convert result to float: '{result.strip()}'")
                         value = None
 
                     # Kalibrierung und Division durch Einwaage
@@ -81,12 +73,13 @@ def run_measurement(filenames, interval_seconds, weights):
                             normed = ""
                     else:
                         normed = ""
+                        calibrated = ""
 
                     elapsed_seconds = time.time() - start_time
                     elapsed_hours = elapsed_seconds / 3600.0
 
                     with open(filenames[channel - 1], "a") as f:
-                        f.write(f"{elapsed_hours:.6f}, {result.strip()}, {calibrated:.6f}, {normed}\n")
+                        f.write(f"{elapsed_hours:.6f}, {result.strip()}, {calibrated if calibrated != '' else ''}, {normed}\n")
                 except Exception as e:
                     print(f"Error with channel {channel}: {e}")
             time.sleep(interval_seconds)
