@@ -48,10 +48,10 @@ def run_measurement(filenames, interval_seconds, weights):
     instrument.write("SENS:VOLT:DC:RANG:AUTO 1")
     instrument.write("SENS:VOLT:DC:DIG 7")
     instrument.write("SENS:Volt:DC:REF:STAT 0")
-    instrument.write("ROUT:OPEN:ALL")
-    instrument.write("ROUT:CLOS (@1)")
-    result = instrument.query("READ?")
-    print("Measurement result:", result)
+    #    instrument.write("ROUT:OPEN:ALL")
+    #    instrument.write("ROUT:CLOS (@1)")
+    #    result = instrument.query("READ?")
+    #    print("Measurement result:", result)
 
     try:
         start_time = time.time()
@@ -129,7 +129,9 @@ app.layout = dbc.Container(
                                                 # Dateinamen untereinander (links)
                                                 dbc.Col(
                                                     [
-                                                        html.Label("Dateiname 1"),
+                                                        html.Label(
+                                                            "Filename Channel 1"
+                                                        ),
                                                         dcc.Input(
                                                             id="filename1",
                                                             type="text",
@@ -137,7 +139,9 @@ app.layout = dbc.Container(
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
-                                                        html.Label("Dateiname 2"),
+                                                        html.Label(
+                                                            "Filename Channel 2"
+                                                        ),
                                                         dcc.Input(
                                                             id="filename2",
                                                             type="text",
@@ -145,7 +149,9 @@ app.layout = dbc.Container(
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
-                                                        html.Label("Dateiname 3"),
+                                                        html.Label(
+                                                            "Filename Channel 3"
+                                                        ),
                                                         dcc.Input(
                                                             id="filename3",
                                                             type="text",
@@ -154,12 +160,14 @@ app.layout = dbc.Container(
                                                             style={"width": "100%"},
                                                         ),
                                                     ],
-                                                    width=6,
+                                                    width=7,
                                                 ),
                                                 # Einwaagen untereinander (rechts)
                                                 dbc.Col(
                                                     [
-                                                        html.Label("Einwaage 1"),
+                                                        html.Label(
+                                                            "Weight 1 (g)"
+                                                        ),
                                                         dcc.Input(
                                                             id="weight1",
                                                             type="number",
@@ -167,7 +175,9 @@ app.layout = dbc.Container(
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
-                                                        html.Label("Einwaage 2"),
+                                                        html.Label(
+                                                            "Weight 2 (g)"
+                                                        ),
                                                         dcc.Input(
                                                             id="weight2",
                                                             type="number",
@@ -175,7 +185,9 @@ app.layout = dbc.Container(
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
-                                                        html.Label("Einwaage 3"),
+                                                        html.Label(
+                                                            "Weight 3 (g)"
+                                                        ),
                                                         dcc.Input(
                                                             id="weight3",
                                                             type="number",
@@ -184,7 +196,7 @@ app.layout = dbc.Container(
                                                             style={"width": "100%"},
                                                         ),
                                                     ],
-                                                    width=6,
+                                                    width=5,
                                                 ),
                                             ]
                                         ),
@@ -194,21 +206,25 @@ app.layout = dbc.Container(
                                                 dbc.Col(
                                                     [
                                                         html.Label(
-                                                            "Messpunktabstand (s)"
+                                                            "Measurement point spacing (s)",
+                                                            style={
+                                                                "marginRight": "10px"
+                                                            },
                                                         ),
                                                         dcc.Input(
                                                             id="interval-input",
                                                             type="number",
                                                             value=20,
-                                                            min=20,
+                                                            min=10,
                                                             step=10,
                                                             className="mb-3",
-                                                            style={"width": "100%"},
+                                                            style={"width": "20%"},
                                                         ),
                                                     ]
                                                 )
                                             ]
                                         ),
+                                        html.Hr(),
                                         dbc.Row(
                                             [
                                                 dbc.Col(
@@ -282,7 +298,11 @@ app.layout = dbc.Container(
             id="graph-update-interval", interval=2000, n_intervals=0
         ),  # alle 2 Sekunden aktualisieren
     ],
-    fluid=True,
+    fluid=False,  # <--- Ändere fluid auf False, damit die Breite begrenzt ist
+    style={
+        "maxWidth": "1200px",
+        "margin": "auto",
+    },  # <--- Optional: Maximalbreite und zentriert
 )
 
 
@@ -400,7 +420,7 @@ def control_measurement(
             stop_style_active,
             True,
             False,
-            "● Messung läuft",
+            "● Measurement in progress",
             indicator_style_running,
         )
 
@@ -427,7 +447,7 @@ def control_measurement(
             stop_style_active,
             True,
             False,
-            "● Messung läuft",
+            "● Measurement in progress",
             indicator_style_running,
         )
     return (
@@ -457,6 +477,13 @@ def update_graph(n, filename1, filename2, filename3):
     data = read_measurement_data(filenames)
     fig = go.Figure()
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+
+    # Finde das Minimum aller normed-Werte
+    all_normed = []
+    for times, normed in data:
+        all_normed.extend(normed)
+    y_min = min(all_normed) if all_normed else 0
+
     for i, (times, normed) in enumerate(data):
         if times and normed:
             fig.add_trace(
@@ -469,8 +496,22 @@ def update_graph(n, filename1, filename2, filename3):
                 )
             )
     fig.update_layout(
-        xaxis_title="Time (h)",
-        yaxis_title="Heat flow (mW/g)",
+        xaxis=dict(
+            title="Time (h)",
+            range=[0, None],  # x-Achse startet bei 0
+            showline=True,
+            linecolor="black",
+            linewidth=2,
+            mirror=False,  # Nur Achse bei x=0
+        ),
+        yaxis=dict(
+            title="Heat flow (mW/g)",
+            range=[y_min, None],  # y-Achse startet beim Minimum
+            showline=True,
+            linecolor="black",
+            linewidth=2,
+            mirror=False,  # Nur Achse bei y=0
+        ),
         template="plotly_white",
         legend_title="Kanal",
         margin=dict(l=40, r=20, t=40, b=40),
