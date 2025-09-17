@@ -8,8 +8,8 @@ from datetime import datetime
 import threading
 import os
 
-# Dateinamen beginnen alle mit dem Datum und Uhrzeit in der Form 2025-09-17_14-23-05
-now_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+# Dateinamen beginnen alle mit dem Datum und Uhrzeit in der Form 2025-09-17_14-23
+now_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
 # Kalibrierkonstanten für die drei Kanäle
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
