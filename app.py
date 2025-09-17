@@ -6,9 +6,10 @@ import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime
 import threading
+import os
 
 # Dateinamen beginnen alle mit dem Datum in der Form 2025-09-17 (heutiges Datum)
-today_str = datetime.now().strftime("%Y-%m-%d")     
+today_str = datetime.now().strftime("%Y-%m-%d")
 
 # Kalibrierkonstanten für die drei Kanäle
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
@@ -265,9 +266,35 @@ app.layout = dbc.Container(
         html.Div(id="run-status", className="mt-3", style={"fontWeight": "bold"}),
         dcc.Store(id="measurement-running", data=False),  # Status-Flag
         dcc.Store(id="stop-requested", data=False),
+        dcc.Interval(
+            id="graph-update-interval", interval=2000, n_intervals=0
+        ),  # alle 2 Sekunden aktualisieren
     ],
     fluid=True,
 )
+
+
+# Hilfsfunktion: Lese aktuelle Messdaten aus den Dateien
+def read_measurement_data(filenames):
+    data = []
+    for fname in filenames:
+        times = []
+        normed = []
+        if os.path.exists(fname):
+            with open(fname, "r") as f:
+                for line in f:
+                    parts = line.strip().split(",")
+                    if len(parts) >= 4:
+                        try:
+                            t = float(parts[0])
+                            n = float(parts[3])
+                            times.append(t)
+                            normed.append(n)
+                        except Exception:
+                            continue
+        data.append((times, normed))
+    return data
+
 
 # Globale Variable für Thread und Stop-Flag
 measurement_thread = None
@@ -333,15 +360,50 @@ def control_measurement(
         )
         measurement_thread.daemon = True
         measurement_thread.start()
-        return "Messung läuft...", True, False, True, False
+        return "", True, False, True, False  # "Messung läuft..." entfernt
 
     if button_id == "stop-button" and running:
         stop_flag.set()
         return "Messung gestoppt.", False, True, False, True
 
     if running:
-        return "Messung läuft...", True, False, True, False
+        return "", True, False, True, False  # "Messung läuft..." entfernt
     return "", False, True, False, False
+
+
+@app.callback(
+    Output("main-graph", "figure"),
+    [
+        Input("graph-update-interval", "n_intervals"),
+        State("filename1", "value"),
+        State("filename2", "value"),
+        State("filename3", "value"),
+    ],
+)
+def update_graph(n, filename1, filename2, filename3):
+    filenames = [filename1, filename2, filename3]
+    data = read_measurement_data(filenames)
+    fig = go.Figure()
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+    for i, (times, normed) in enumerate(data):
+        if times and normed:
+            fig.add_trace(
+                go.Scatter(
+                    x=times,
+                    y=normed,
+                    mode="lines+markers",
+                    name=f"Channel {i+1}",
+                    line=dict(color=colors[i]),
+                )
+            )
+    fig.update_layout(
+        xaxis_title="Time (h)",
+        yaxis_title="Heat flow (mW/g)",
+        template="plotly_white",
+        legend_title="Kanal",
+        margin=dict(l=40, r=20, t=40, b=40),
+    )
+    return fig
 
 
 if __name__ == "__main__":
