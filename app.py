@@ -13,6 +13,29 @@ now_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
 # Calibration constants for the three channels
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
 
+# Create list of possible directories to save CSV files
+parent = os.path.expanduser("~")
+CSV_DIRECTORIES = [
+    "D:/",
+    "E:/",
+    "F:/",
+    os.getcwd(),
+    parent,
+    os.path.join(os.path.expanduser("~"), "Documents"),
+    os.path.join(os.path.expanduser("~"), "Downloads"),
+]
+
+# Add all subdirectories in the user's home directory
+CSV_DIRECTORIES += [os.path.join(parent, d)
+    for d in os.listdir(parent)
+    if os.path.isdir(os.path.join(parent, d))]
+
+# Flatten the list and remove non-existing directories
+CSV_DIRECTORIES = [d for d in CSV_DIRECTORIES if os.path.isdir(d)]
+# If no valid directories found, use current directory
+if not CSV_DIRECTORIES:
+    CSV_DIRECTORIES = [os.getcwd()]
+
 
 def run_measurement(filenames, interval_seconds, weights):
     import pyvisa
@@ -38,7 +61,7 @@ def run_measurement(filenames, interval_seconds, weights):
     instrument.read_termination = "\r"
     instrument.write("*RST")
     instrument.write("*WAI")
-    instrument.write("SRE 1")   # Instruments beeps
+    instrument.write("SRE 1")  # Instruments beeps
     instrument.write("SYST:RWL")
     instrument.write("SENS:FUNC 'Volt:DC'")
     instrument.write("SYST:AZER:STAT 0")
@@ -135,7 +158,7 @@ app.layout = dbc.Container(
                                                             id="filename1",
                                                             type="text",
                                                             value=f"{now_str}-1.csv",
-                                                            className="mb-2",
+                                                            className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                         html.Label(
@@ -145,7 +168,7 @@ app.layout = dbc.Container(
                                                             id="filename2",
                                                             type="text",
                                                             value=f"{now_str}-2.csv",
-                                                            className="mb-2",
+                                                            className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                         html.Label(
@@ -155,7 +178,7 @@ app.layout = dbc.Container(
                                                             id="filename3",
                                                             type="text",
                                                             value=f"{now_str}-3.csv",
-                                                            className="mb-2",
+                                                            className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                     ],
@@ -169,7 +192,7 @@ app.layout = dbc.Container(
                                                             id="weight1",
                                                             type="number",
                                                             step="0.001",
-                                                            className="mb-2",
+                                                            className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                         html.Label("Weight 2 (g)"),
@@ -177,7 +200,7 @@ app.layout = dbc.Container(
                                                             id="weight2",
                                                             type="number",
                                                             step="0.001",
-                                                            className="mb-2",
+                                                            className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                         html.Label("Weight 3 (g)"),
@@ -185,13 +208,16 @@ app.layout = dbc.Container(
                                                             id="weight3",
                                                             type="number",
                                                             step="0.001",
-                                                            className="mb-2",
+                                                            className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                     ],
                                                     width=5,
                                                 ),
                                             ]
+                                        ),
+                                        html.P(
+                                            "You can write the weights using either a point or a comma as the decimal separator, as both are supported."
                                         ),
                                         html.Hr(),
                                         dbc.Row(
@@ -210,7 +236,7 @@ app.layout = dbc.Container(
                                                             value=20,
                                                             min=10,
                                                             step=10,
-                                                            className="mb-3",
+                                                            className="mb-1",
                                                             style={"width": "20%"},
                                                         ),
                                                     ]
@@ -288,28 +314,51 @@ app.layout = dbc.Container(
         dcc.Store(id="measurement-running", data=False),  # Status flag
         dcc.Store(id="stop-requested", data=False),
         dcc.Interval(
-            id="graph-update-interval", interval=3000, n_intervals=0  # interval in ms, update every 3 seconds
-        ), 
+            id="graph-update-interval",
+            interval=3000,
+            n_intervals=0,  # interval in ms, update every 3 seconds
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.Label(
+                            "Select directory for CSV files:",
+                            style={"marginBottom": "0.5rem"},
+                        ),
+                        dcc.Dropdown(
+                            id="csv-directory",
+                            options=[{"label": d, "value": d} for d in CSV_DIRECTORIES],
+                            value=CSV_DIRECTORIES[0],
+                            clearable=False,
+                            style={"width": "100%", "marginBottom": "1rem"},
+                        ),
+                        html.P(
+                            "Only directories that already exist are listed! You can also use a USB flash drive (drives D:, E: or F: are supported).",
+                            style={"color": "red"},
+                        ),
+                    ],
+                    width=12,
+                ),
+            ]
+        ),
     ],
     fluid=False,
-    style={
-        "maxWidth": "1200px",
-        "margin": "auto",
-    },
+    style={"maxWidth": "1200px", "margin": "auto"},
 )
 
 
 # Helper function: Read current measurement data from files
 def read_measurement_data(filenames):
     data = []
-    for fname in filenames:
+    for full_path in filenames:
         times = []
         normed = []
-        if os.path.exists(fname):
-            with open(fname, "r") as f:
+        if os.path.exists(full_path):
+            with open(full_path, "r") as f:
                 for line in f:
                     parts = line.strip().split(",")
-                    if len(parts) == 2:
+                    if len(parts) >= 2:
                         try:
                             t = float(parts[0])
                             n = float(parts[1])
@@ -340,6 +389,7 @@ stop_flag = threading.Event()
     ],
     [Input("run-button", "n_clicks"), Input("stop-button", "n_clicks")],
     [
+        State("csv-directory", "value"),
         State("filename1", "value"),
         State("filename2", "value"),
         State("filename3", "value"),
@@ -355,6 +405,7 @@ stop_flag = threading.Event()
 def control_measurement(
     run_clicks,
     stop_clicks,
+    csv_dir,
     filename1,
     filename2,
     filename3,
@@ -399,7 +450,12 @@ def control_measurement(
                 return None
 
         weights = [parse_weight(w1), parse_weight(w2), parse_weight(w3)]
-        filenames = [filename1, filename2, filename3]
+        # Combine directory and filenames
+        filenames = [
+            os.path.join(csv_dir, filename1),
+            os.path.join(csv_dir, filename2),
+            os.path.join(csv_dir, filename3),
+        ]
         measurement_thread = threading.Thread(
             target=run_measurement, args=(filenames, interval - 1, weights)
         )
@@ -460,13 +516,19 @@ def control_measurement(
     Output("main-graph", "figure"),
     [
         Input("graph-update-interval", "n_intervals"),
+        State("csv-directory", "value"),
         State("filename1", "value"),
         State("filename2", "value"),
         State("filename3", "value"),
     ],
 )
-def update_graph(n, filename1, filename2, filename3):
-    filenames = [filename1, filename2, filename3]
+def update_graph(n, csv_dir, filename1, filename2, filename3):
+    # Build full paths for the files
+    filenames = [
+        os.path.join(csv_dir, filename1),
+        os.path.join(csv_dir, filename2),
+        os.path.join(csv_dir, filename3),
+    ]
     data = read_measurement_data(filenames)
     fig = go.Figure()
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
@@ -491,22 +553,23 @@ def update_graph(n, filename1, filename2, filename3):
     fig.update_layout(
         xaxis=dict(
             title="Time (h)",
-            range=[0, None],  # x-axis starts at 0
+            range=[0, None],
             showline=True,
             linecolor="black",
             linewidth=2,
-            mirror=False,  # Only axis at x=0
+            zeroline=False,
+            mirror=False,
         ),
         yaxis=dict(
             title="Heat flow (mW/g)",
-            range=[y_min, None],  # y-axis starts at minimum
+            range=[y_min, None],
             showline=True,
             linecolor="black",
             linewidth=2,
-            mirror=False,  # Only axis at y=0
+            zeroline=False,
+            mirror=False,
         ),
         template="plotly_white",
-        legend_title="Channel",
         margin=dict(l=40, r=20, t=40, b=40),
     )
     return fig
