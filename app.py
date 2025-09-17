@@ -6,18 +6,27 @@ import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime
 import threading
+import pyvisa
+import time
 
 today_str = datetime.now().strftime("%Y-%m-%d")
 
 # Kalibrierkonstanten für die drei Kanäle
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
 
+
 def run_measurement(filenames, interval_seconds, weights):
-    import pyvisa
-    import time
 
     rm = pyvisa.ResourceManager()
-    resource_str = "ASRL1::INSTR"  # ASRL1 usually maps to COM1
+    resources = rm.list_resources()
+    print("Available VISA resources:", resources)
+    if not resources:
+        print("No VISA resources found!")
+        return
+
+    # Wähle das erste gefundene Resource-Objekt (oder passe Auswahl nach Bedarf an)
+    resource_str = resources[0]
+    print(f"Connecting to {resource_str} ...")
     instrument = rm.open_resource(resource_str)
     # Set serial communication parameters
     instrument.baud_rate = 9600
@@ -79,7 +88,9 @@ def run_measurement(filenames, interval_seconds, weights):
                     elapsed_hours = elapsed_seconds / 3600.0
 
                     with open(filenames[channel - 1], "a") as f:
-                        f.write(f"{elapsed_hours:.6f}, {result.strip()}, {calibrated if calibrated != '' else ''}, {normed}\n")
+                        f.write(
+                            f"{elapsed_hours:.6f}, {result.strip()}, {calibrated if calibrated != '' else ''}, {normed}\n"
+                        )
                 except Exception as e:
                     print(f"Error with channel {channel}: {e}")
             time.sleep(interval_seconds)
@@ -262,10 +273,14 @@ def start_measurement(n_clicks, filename1, filename2, filename3, interval, w1, w
                 return float(str(val).replace(",", "."))
             except Exception:
                 return None
+
         weights = [parse_weight(w1), parse_weight(w2), parse_weight(w3)]
         filenames = [filename1, filename2, filename3]
         import threading
-        thread = threading.Thread(target=run_measurement, args=(filenames, interval - 1, weights))
+
+        thread = threading.Thread(
+            target=run_measurement, args=(filenames, interval - 1, weights)
+        )
         thread.daemon = True
         thread.start()
         return "Messung läuft..."
