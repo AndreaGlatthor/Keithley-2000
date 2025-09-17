@@ -1,6 +1,11 @@
 # Heat Flow Calorimeter Data Acquisition
 
 I operate a heat flow calorimeter using a Keithley 2000 multimeter with a scanner card. The model 2000 is a 6.5 digit multimeter with a RS-232 serial interface, which makes it easy to connect to a computer. The scanner card allows me to connect up to 10 channels, but I only use three of them for my calorimeter.
+
+For many years, I used the OMI software (from Dr Michael Ecker Scientific Consulting, [https://mesicon.de/](https://mesicon.de/)) on a Windows 98 desktop PC with an RS-232 interface. However, after switching to a Windows 11 notebook without an RS-232 port and using a USB-to-serial converter, communication problems arose. This app was created as a result.
+
+The app is built using Dash and Plotly, which provide a web-based interface for easy interaction. The app allows you to set the output file names, sample weights, measurement interval, and output directory. The measurements are displayed in real-time on a graph, and the data is saved in CSV format.
+
 My instrument's identification string is: `KEITHLEY INSTRUMENTS INC.,MODEL 2000,1103202,A19  /A02`. This is an older device, built around the year 2000. Newer models may have slightly different programming syntax. For detailed information, please refer to the user manual for your device. The user manual for the Model 2000 is included in this repository: [Keithley 2000 User Manual (PDF)](Keithley%202000%20User%20Manual.pdf).
 
 The calorimeter has one reference cell and three measuring cells. The difference between the reference cell and the measuring cell is supplied by the scanner card on the three channels, so I don't have to calculate anything. The scanner is supposed to query each of the three once every 20 seconds (editable) and save the data in a csv file.
