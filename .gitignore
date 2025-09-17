@@ -1,6 +1,8 @@
-line1.txt
-line2.txt
-line3.txt
+
+*.csv
+
+# Python.gitignore
+# Created by https://www.toptal.com/developers/gitignore/api/python
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
