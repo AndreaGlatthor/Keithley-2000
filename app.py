@@ -576,4 +576,4 @@ def update_graph(n, csv_dir, filename1, filename2, filename3):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
