@@ -40,7 +40,7 @@ Click the link (ctrl + click) or open a browser and go to `http://127.0.0.1:8050
 
 - The file names are pre-filled with the current date and time, followed by a dash plus channel number. You can change them if you want.
 - The sample weights are not set by default, enter the actual weights of your samples. If you leave a weight field empty the corresponding channel will be ignored.
-- Select a directory where the csv files will be saved (only existing directories are listed, USB flash drives D, E or F are supported). 
+- Select a directory where the csv files will be saved (only existing directories are listed, USB flash drives D, E or F are supported). If you want to set a specific directory that is not listed, you can change the `CSV_DIRECTORIES` variable in the code.
 - Set the measurement point spacing in seconds (default is 20 seconds).
 - Click the Run button to start the measurement. The Stop button is disabled until you start the measurement.
 - The graph on the right will show the measurements in real time.
