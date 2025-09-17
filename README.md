@@ -1,9 +1,11 @@
 # Heat Flow Calorimeter Data Acquisition
 
-I operate a heat flow calorimeter using a Keithley 2000 multimeter with a scanner card.
-My instruments identification string is: `KEITHLEY INSTRUMENTS INC.,MODEL 2000,1103202,A19  /A02`.
+I operate a heat flow calorimeter using a Keithley 2000 multimeter with a scanner card. The model 2000 is a 6.5 digit multimeter with a RS-232 serial interface, which makes it easy to connect to a computer. The scanner card allows me to connect up to 10 channels, but I only use three of them for my calorimeter.
+My instrument's identification string is: `KEITHLEY INSTRUMENTS INC.,MODEL 2000,1103202,A19  /A02`. This is an older device, built around the year 2000. Newer models may have slightly different programming syntax. For detailed information, please refer to the user manual for your device. The user manual for the Model 2000 is included in this repository: [Keithley 2000 User Manual (PDF)](Keithley%202000%20User%20Manual.pdf).
 
 The calorimeter has one reference cell and three measuring cells. The difference between the reference cell and the measuring cell is supplied by the scanner card on the three channels, so I don't have to calculate anything. The scanner is supposed to query each of the three once every 20 seconds (editable) and save the data in a csv file.
+
+![Calorimeter assembly with cylindrical metal housing shown open to reveal four sample containers inside the lower section. The upper section is placed to the side. The setup is situated on a plain white background, emphasizing a clean laboratory environment. No visible text is present in the image. The scene conveys a neutral, scientific tone focused on precision instrumentation.](Calorimeter.jpg)
 
 ## Requirements
 
