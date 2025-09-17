@@ -8,8 +8,8 @@ from datetime import datetime
 import threading
 import os
 
-# Dateinamen beginnen alle mit dem Datum in der Form 2025-09-17 (heutiges Datum)
-today_str = datetime.now().strftime("%Y-%m-%d")
+# Dateinamen beginnen alle mit dem Datum und Uhrzeit in der Form 2025-09-17_14-23-05
+now_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 # Kalibrierkonstanten für die drei Kanäle
 CAL_FACTORS = [12.45, 12.3151, 12.9117]
@@ -135,7 +135,7 @@ app.layout = dbc.Container(
                                                         dcc.Input(
                                                             id="filename1",
                                                             type="text",
-                                                            value=f"{today_str}-1.csv",
+                                                            value=f"{now_str}-1.csv",
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
@@ -143,7 +143,7 @@ app.layout = dbc.Container(
                                                         dcc.Input(
                                                             id="filename2",
                                                             type="text",
-                                                            value=f"{today_str}-2.csv",
+                                                            value=f"{now_str}-2.csv",
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
@@ -151,7 +151,7 @@ app.layout = dbc.Container(
                                                         dcc.Input(
                                                             id="filename3",
                                                             type="text",
-                                                            value=f"{today_str}-3.csv",
+                                                            value=f"{now_str}-3.csv",
                                                             className="mb-2",
                                                             style={"width": "100%"},
                                                         ),
@@ -220,8 +220,11 @@ app.layout = dbc.Container(
                                                         color="success",
                                                         className="mt-2",
                                                         n_clicks=0,
-                                                        style={"width": "100%"},
-                                                        disabled=False,  # Initialzustand: aktiv
+                                                        style={
+                                                            "width": "100%",
+                                                            "opacity": "1",
+                                                        },
+                                                        disabled=False,
                                                     )
                                                 )
                                             ]
@@ -235,11 +238,22 @@ app.layout = dbc.Container(
                                                         color="danger",
                                                         className="mt-2",
                                                         n_clicks=0,
-                                                        style={"width": "100%"},
-                                                        disabled=False,
+                                                        style={
+                                                            "width": "100%",
+                                                            "opacity": "0.2",
+                                                        },  # opacity 0.2 auch im Layout
+                                                        disabled=True,  # Vor dem Start deaktiviert
                                                     )
                                                 )
                                             ]
+                                        ),
+                                        html.Div(
+                                            id="measurement-indicator",
+                                            className="mt-3",
+                                            style={
+                                                "fontWeight": "bold",
+                                                "fontSize": "1.2em",
+                                            },
                                         ),
                                     ]
                                 )
@@ -305,9 +319,13 @@ stop_flag = threading.Event()
     [
         Output("run-status", "children"),
         Output("run-button", "disabled"),
+        Output("run-button", "style"),
         Output("stop-button", "disabled"),
+        Output("stop-button", "style"),
         Output("measurement-running", "data"),
         Output("stop-requested", "data"),
+        Output("measurement-indicator", "children"),
+        Output("measurement-indicator", "style"),
     ],
     [Input("run-button", "n_clicks"), Input("stop-button", "n_clicks")],
     [
@@ -344,6 +362,22 @@ def control_measurement(
 
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
+    # Default styles
+    run_style_active = {"width": "100%", "opacity": "1"}
+    run_style_disabled = {"width": "100%", "opacity": "0.2"}
+    stop_style_active = {"width": "100%", "opacity": "1"}
+    stop_style_disabled = {"width": "100%", "opacity": "0.2"}
+    indicator_style_running = {
+        "color": "#28a745",
+        "fontWeight": "bold",
+        "fontSize": "1.2em",
+    }
+    indicator_style_idle = {
+        "color": "#000000",
+        "fontWeight": "normal",
+        "fontSize": "1.2em",
+    }
+
     if button_id == "run-button" and not running:
         stop_flag.clear()
 
@@ -360,15 +394,55 @@ def control_measurement(
         )
         measurement_thread.daemon = True
         measurement_thread.start()
-        return "", True, False, True, False  # "Messung läuft..." entfernt
+        return (
+            "",
+            True,
+            run_style_disabled,
+            False,  # Stop-Button jetzt aktiv
+            stop_style_active,
+            True,
+            False,
+            "● Messung läuft",
+            indicator_style_running,
+        )
 
     if button_id == "stop-button" and running:
         stop_flag.set()
-        return "Messung gestoppt.", False, True, False, True
+        return (
+            "",
+            False,
+            run_style_active,
+            True,  # Stop-Button wieder deaktiviert
+            stop_style_disabled,
+            False,
+            True,
+            "",
+            indicator_style_idle,
+        )
 
     if running:
-        return "", True, False, True, False  # "Messung läuft..." entfernt
-    return "", False, True, False, False
+        return (
+            "",
+            True,
+            run_style_disabled,
+            False,  # Stop-Button aktiv während Messung
+            stop_style_active,
+            True,
+            False,
+            "● Messung läuft",
+            indicator_style_running,
+        )
+    return (
+        "",
+        False,
+        run_style_active,
+        True,  # Stop-Button bleibt deaktiviert vor Start
+        stop_style_disabled,
+        False,
+        False,
+        "",
+        indicator_style_idle,
+    )
 
 
 @app.callback(
