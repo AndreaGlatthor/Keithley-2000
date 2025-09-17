@@ -26,20 +26,17 @@ def run_measurement(filenames, interval_seconds, weights):
         print("No VISA resources found!")
         return
 
-    # Wähle das erste gefundene Resource-Objekt (oder passe Auswahl nach Bedarf an)
     resource_str = resources[0]
     print(f"Connecting to {resource_str} ...")
     instrument = rm.open_resource(resource_str)
-    # Set serial communication parameters
     instrument.baud_rate = 9600
     instrument.data_bits = 8
     instrument.stop_bits = pyvisa.constants.StopBits.one
     instrument.parity = pyvisa.constants.Parity.none
     instrument.flow_control = pyvisa.constants.ControlFlow.none
-    instrument.timeout = 5000  # 5 seconds
+    instrument.timeout = 5000
     instrument.write_termination = "\r"
     instrument.read_termination = "\r"
-    # --- Send initialization and measurement commands ---
     instrument.write("*RST")
     instrument.write("*WAI")
     instrument.write("SRE 1")
@@ -62,6 +59,9 @@ def run_measurement(filenames, interval_seconds, weights):
             for channel in range(1, 4):
                 if stop_flag.is_set():
                     break
+                # Prüfe, ob für diesen Kanal eine Einwaage angegeben ist
+                if weights[channel - 1] is None:
+                    continue  # Keine Einwaage → keine Messung/kein Schreiben
                 try:
                     instrument.write("*SRE 1")
                     instrument.write("SENS:FUNC 'Volt:DC'")
@@ -70,14 +70,12 @@ def run_measurement(filenames, interval_seconds, weights):
                     time.sleep(0.05)
                     result = instrument.query("READ?")
 
-                    # Messwert als float
                     try:
                         value = float(result.strip())
                     except Exception:
                         value = None
 
-                    # Kalibrierung und Division durch Einwaage
-                    if value is not None and weights[channel - 1] is not None:
+                    if value is not None:
                         calibrated = value * CAL_FACTORS[channel - 1]
                         try:
                             normed = calibrated / weights[channel - 1]
