@@ -11,7 +11,11 @@ import os
 now_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
 # Calibration constants for the three channels
-CAL_FACTORS = [12.45, 12.3151, 12.9117]     # Calibration factors for channels 1, 2, 3 (Watt/Volt)
+CAL_FACTORS = [
+    12.45,
+    12.3151,
+    12.9117,
+]  # Calibration factors for channels 1, 2, 3 (Watt/Volt)
 
 # Create list of possible directories to save CSV files
 parent = os.path.expanduser("~")
@@ -26,15 +30,22 @@ CSV_DIRECTORIES = [
 ]
 
 # Add all subdirectories in the user's home directory
-CSV_DIRECTORIES += [os.path.join(parent, d)
+CSV_DIRECTORIES += [
+    os.path.join(parent, d)
     for d in os.listdir(parent)
-    if os.path.isdir(os.path.join(parent, d))]
+    if os.path.isdir(os.path.join(parent, d))
+]
 
 # Flatten the list and remove non-existing directories
 CSV_DIRECTORIES = [d for d in CSV_DIRECTORIES if os.path.isdir(d)]
 # If no valid directories found, use current directory
 if not CSV_DIRECTORIES:
     CSV_DIRECTORIES = [os.getcwd()]
+
+# Global variable for thread and stop flag
+measurement_thread = None
+stop_flag = threading.Event()
+visa_error_flag = threading.Event()  # New: flag for VISA error
 
 
 def run_measurement(filenames, interval_seconds, weights):
@@ -45,9 +56,8 @@ def run_measurement(filenames, interval_seconds, weights):
     resources = rm.list_resources()
     print("Available VISA resources:", resources)
     if not resources:
-        print("No VISA resources found!")   # TODO: Show in GUI
+        visa_error_flag.set()  # Set VISA error flag
         return
-
     resource_str = resources[0]
     print(f"Connecting to {resource_str} ...")
     instrument = rm.open_resource(resource_str)
@@ -70,11 +80,6 @@ def run_measurement(filenames, interval_seconds, weights):
     instrument.write("SENS:VOLT:DC:RANG:AUTO 1")
     instrument.write("SENS:VOLT:DC:DIG 7")
     instrument.write("SENS:Volt:DC:REF:STAT 0")
-    #    instrument.write("ROUT:OPEN:ALL")
-    #    instrument.write("ROUT:CLOS (@1)")
-    #    result = instrument.query("READ?")
-    #    print("Measurement result:", result)
-
     try:
         start_time = time.time()
         while not stop_flag.is_set():
@@ -98,7 +103,9 @@ def run_measurement(filenames, interval_seconds, weights):
                         value = None
 
                     if value is not None:
-                        calibrated = value * 1000 * CAL_FACTORS[channel - 1]    # Convert to mV and apply calibration factor
+                        calibrated = (
+                            value * 1000 * CAL_FACTORS[channel - 1]
+                        )  # Convert to mV and apply calibration factor
                         try:
                             normed = calibrated / weights[channel - 1]
                         except Exception:
@@ -135,7 +142,11 @@ app.layout = dbc.Container(
                 dbc.Col(
                     html.H2("Keithley 2000 Monitor", className="text-center my-4"),
                     width=12,
-                )
+                ),
+                html.Div(
+                    id="visa-error-message",
+                    style={"color": "red", "fontWeight": "bold", "marginTop": "0.5rem", "marginBottom": "1rem"},
+                ),
             ]
         ),
         dbc.Row(
@@ -277,14 +288,6 @@ app.layout = dbc.Container(
                                                 )
                                             ]
                                         ),
-                                        html.Div(
-                                            id="measurement-indicator",
-                                            className="mt-3",
-                                            style={
-                                                "fontWeight": "bold",
-                                                "fontSize": "1.2em",
-                                            },
-                                        ),
                                     ]
                                 )
                             ]
@@ -366,11 +369,6 @@ def read_measurement_data(filenames):
     return data
 
 
-# Global variable for thread and stop flag
-measurement_thread = None
-stop_flag = threading.Event()
-
-
 @app.callback(
     [
         Output("run-status", "children"),
@@ -380,8 +378,13 @@ stop_flag = threading.Event()
         Output("stop-button", "style"),
         Output("measurement-running", "data"),
         Output("stop-requested", "data"),
+        Output("visa-error-message", "children"),
     ],
-    [Input("run-button", "n_clicks"), Input("stop-button", "n_clicks")],
+    [
+        Input("run-button", "n_clicks"),
+        Input("stop-button", "n_clicks"),
+        Input("graph-update-interval", "n_intervals"),
+    ],
     [
         State("csv-directory", "value"),
         State("filename1", "value"),
@@ -394,11 +397,11 @@ stop_flag = threading.Event()
         State("measurement-running", "data"),
         State("stop-requested", "data"),
     ],
-    prevent_initial_call=True,
 )
 def control_measurement(
     run_clicks,
     stop_clicks,
+    n_intervals,
     csv_dir,
     filename1,
     filename2,
@@ -410,11 +413,33 @@ def control_measurement(
     running,
     stop_requested,
 ):
-    global measurement_thread, stop_flag
+    global measurement_thread, stop_flag, visa_error_flag
 
     ctx = dash.callback_context
     if not ctx.triggered:
-        raise dash.exceptions.PreventUpdate
+        # On initial load or interval, just check for VISA error
+        if visa_error_flag.is_set():
+            return (
+                "",
+                False,
+                {"width": "100%", "opacity": "1"},
+                True,
+                {"width": "100%", "opacity": "0.2"},
+                False,
+                False,
+                "No VISA resources found! Please check if your instrument is connected and powered on, then restart the application.",
+            )
+        else:
+            return (
+                "",
+                False,
+                {"width": "100%", "opacity": "1"},
+                True,
+                {"width": "100%", "opacity": "0.2"},
+                False,
+                False,
+                "",
+            )
 
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
@@ -423,34 +448,28 @@ def control_measurement(
     run_style_disabled = {"width": "100%", "opacity": "0.2"}
     stop_style_active = {"width": "100%", "opacity": "1"}
     stop_style_disabled = {"width": "100%", "opacity": "0.2"}
-    indicator_style_running = {
-        "color": "#28a745",
-        "fontWeight": "bold",
-        "fontSize": "1.2em",
-    }
-    indicator_style_idle = {
-        "color": "#000000",
-        "fontWeight": "normal",
-        "fontSize": "1.2em",
-    }
 
+    error_msg = ""
     if button_id == "run-button" and not running:
         stop_flag.clear()
+        visa_error_flag.clear()
 
         def parse_weight(val):
             try:
                 return float(str(val).replace(",", "."))
             except Exception:
                 return None
+
         # Parse weights (type: text) and handle both comma and point as decimal separator
         weights = [parse_weight(w1), parse_weight(w2), parse_weight(w3)]
-        
+
         # Combine directory and filenames
         filenames = [
             os.path.join(csv_dir, filename1),
             os.path.join(csv_dir, filename2),
             os.path.join(csv_dir, filename3),
         ]
+        # Start measurement thread
         measurement_thread = threading.Thread(
             target=run_measurement, args=(filenames, interval - 1, weights)
         )
@@ -464,6 +483,7 @@ def control_measurement(
             stop_style_active,
             True,
             False,
+            "",
         )
 
     if button_id == "stop-button" and running:
@@ -476,6 +496,20 @@ def control_measurement(
             stop_style_disabled,
             False,
             True,
+            "",
+        )
+
+    # On interval: show VISA error if set
+    if visa_error_flag.is_set():
+        return (
+            "",
+            False,
+            run_style_active,
+            True,
+            stop_style_disabled,
+            False,
+            False,
+            "No VISA resources found! Please check if your instrument is connected and powered on, then restart the application.",
         )
 
     if running:
@@ -487,6 +521,7 @@ def control_measurement(
             stop_style_active,
             True,
             False,
+            "",
         )
     return (
         "",
@@ -496,6 +531,7 @@ def control_measurement(
         stop_style_disabled,
         False,
         False,
+        "",
     )
 
 
