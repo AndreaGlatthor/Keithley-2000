@@ -45,7 +45,7 @@ def run_measurement(filenames, interval_seconds, weights):
     resources = rm.list_resources()
     print("Available VISA resources:", resources)
     if not resources:
-        print("No VISA resources found!")
+        print("No VISA resources found!")   # TODO: Show in GUI
         return
 
     resource_str = resources[0]
@@ -83,7 +83,7 @@ def run_measurement(filenames, interval_seconds, weights):
                     break
                 # Check if a weight is specified for this channel
                 if weights[channel - 1] is None:
-                    continue  # No weight → no measurement/no writing
+                    continue  # No weight → no measurement → no writing to file
                 try:
                     instrument.write("*SRE 1")
                     instrument.write("SENS:FUNC 'Volt:DC'")
@@ -190,24 +190,21 @@ app.layout = dbc.Container(
                                                         html.Label("Weight 1 (g)"),
                                                         dcc.Input(
                                                             id="weight1",
-                                                            type="number",
-                                                            step="0.001",
+                                                            type="text",
                                                             className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                         html.Label("Weight 2 (g)"),
                                                         dcc.Input(
                                                             id="weight2",
-                                                            type="number",
-                                                            step="0.001",
+                                                            type="text",
                                                             className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
                                                         html.Label("Weight 3 (g)"),
                                                         dcc.Input(
                                                             id="weight3",
-                                                            type="number",
-                                                            step="0.001",
+                                                            type="text",
                                                             className="mb-2 fw-bold",
                                                             style={"width": "100%"},
                                                         ),
@@ -445,8 +442,9 @@ def control_measurement(
                 return float(str(val).replace(",", "."))
             except Exception:
                 return None
-
+        # Parse weights (type: text) and handle both comma and point as decimal separator
         weights = [parse_weight(w1), parse_weight(w2), parse_weight(w3)]
+        
         # Combine directory and filenames
         filenames = [
             os.path.join(csv_dir, filename1),
