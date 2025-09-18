@@ -335,7 +335,6 @@ app.layout = dbc.Container(
                         ),
                         html.P(
                             "Only directories that already exist are listed! You can also use a USB flash drive (drives D:, E: or F: are supported).",
-                            style={"color": "red"},
                         ),
                     ],
                     width=12,
@@ -384,8 +383,6 @@ stop_flag = threading.Event()
         Output("stop-button", "style"),
         Output("measurement-running", "data"),
         Output("stop-requested", "data"),
-        Output("measurement-indicator", "children"),
-        Output("measurement-indicator", "style"),
     ],
     [Input("run-button", "n_clicks"), Input("stop-button", "n_clicks")],
     [
@@ -469,8 +466,6 @@ def control_measurement(
             stop_style_active,
             True,
             False,
-            "● Measurement in progress",
-            indicator_style_running,
         )
 
     if button_id == "stop-button" and running:
@@ -483,8 +478,6 @@ def control_measurement(
             stop_style_disabled,
             False,
             True,
-            "",
-            indicator_style_idle,
         )
 
     if running:
@@ -496,8 +489,6 @@ def control_measurement(
             stop_style_active,
             True,
             False,
-            "● Measurement in progress",
-            indicator_style_running,
         )
     return (
         "",
@@ -507,8 +498,6 @@ def control_measurement(
         stop_style_disabled,
         False,
         False,
-        "",
-        indicator_style_idle,
     )
 
 
