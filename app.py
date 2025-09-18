@@ -11,7 +11,7 @@ import os
 now_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
 # Calibration constants for the three channels
-CAL_FACTORS = [12.45, 12.3151, 12.9117]
+CAL_FACTORS = [12.45, 12.3151, 12.9117]     # Calibration factors for channels 1, 2, 3 (Watt/Volt)
 
 # Create list of possible directories to save CSV files
 parent = os.path.expanduser("~")
@@ -98,7 +98,7 @@ def run_measurement(filenames, interval_seconds, weights):
                         value = None
 
                     if value is not None:
-                        calibrated = value * CAL_FACTORS[channel - 1]
+                        calibrated = value * 1000 * CAL_FACTORS[channel - 1]    # Convert to mV and apply calibration factor
                         try:
                             normed = calibrated / weights[channel - 1]
                         except Exception:
@@ -576,4 +576,4 @@ def update_graph(n, csv_dir, filename1, filename2, filename3):
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=False, port=8050)
