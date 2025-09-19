@@ -1,6 +1,6 @@
 # Heat Flow Calorimeter Data Acquisition
 
-I operate a heat flow calorimeter using a Keithley 2000 multimeter with a scanner card. The model 2000 is a 6.5 digit multimeter with a RS-232 serial interface, which makes it easy to connect to a computer. The scanner card allows me to connect up to 10 channels, but I only use three of them for my calorimeter.
+For isothermal conduction calorimetry, I use a Keithley 2000 multimeter with a scanner card. The model 2000 is a 6.5 digit multimeter with a RS-232 serial interface. The scanner card allows me to connect up to 10 channels, but I only use three of them for my calorimeter.
 
 For many years, I used the OMI software (from Dr Michael Ecker Scientific Consulting, [https://mesicon.de/](https://mesicon.de/)) on a Windows 98 desktop PC with an RS-232 interface. However, after switching to a Windows 11 notebook without an RS-232 port and using a USB-to-serial converter, communication problems arose. This app was created as a result.
 
@@ -16,6 +16,7 @@ The calorimeter has one reference cell and three measuring cells. The difference
 
 - Keithley 2000 multimeter with scanner card
 - Computer with RS-232 serial port or an USB-to-Serial adaptor (I use a Techconnect USB SERIAL ADAPTOR: [https://visionaudiovisual.com/en/product/tc-usbser](https://visionaudiovisual.com/en/product/tc-usbser))
+- The app gets a list of VISA resources named `ASRLx::INSTR` where `x` is the COM port number. My setup has only one COM-port, so I use the first resource in the list. If you have multiple COM-ports, you may need to modify the code to select the correct one. That is something I did not test.
 - Python 3.7 or higher with the following libraries installed: (see `requirements.txt`)
 
     > This code makes use of the `f"..."` or [f-string syntax](https://www.python.org/dev/peps/pep-0498/). This syntax was introduced in Python 3.6, so please make sure you have at least this version installed.
@@ -34,14 +35,19 @@ Run the app with:
 python app.py
 ```
 
-In the Terminal you get:
+You should see something like this in the terminal:
 
 ```text
 Dash is running on http://127.0.0.1:8050/
 
  * Serving Flask app 'app'
  * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:8050
+Press CTRL+C to quit
  ```
+
+You can ignore the warning. It simply reminds you that this is not a production server. Since you are running the app locally and not exposing it to the internet, this is safe.
 
 Click the link (ctrl + click) or open a browser and go to `http://127.0.0.1:8050/`.
 
@@ -52,8 +58,7 @@ Click the link (ctrl + click) or open a browser and go to `http://127.0.0.1:8050
 - Click the Run button to start the measurement. The Stop button is disabled until you start the measurement.
 - The graph on the right will show the measurements in real time.
 
-![Screenshot of the Keithley 2000 Monitor web application interface. On the left, a form allows users to input filenames and weights for three channels, set measurement point spacing in seconds, and select a directory for CSV files. The Run button is active, while the Stop button is disabled. Below the directory selection, a red warning message states that only existing directories are listed and USB flash drives D, E, or F are supported. On the right, a blank graph is displayed with axes labeled Heat flow in milliwatts per gram and Time in hours. The overall environment is clean and functional, designed for scientific data acquisition and monitoring.](image.png)
-
+![Screenshot of the Keithley 2000 Monitor web application interface. On the left, a form allows users to input filenames and weights for three channels, set measurement point spacing in seconds, and select a directory for CSV files. The Run button is active, while the Stop button is disabled. Below the directory selection, a red warning message states that only existing directories are listed and USB flash drives D, E, or F are supported. On the right, a blank graph is displayed with axes labeled Heat flow in milliwatts per gram and Time in hours. The overall environment is clean and functional, designed for scientific data acquisition and monitoring.](Screenshot_at_start.png)
 
 ### Output file format
 
@@ -62,13 +67,14 @@ The output file is a simple text file with comma-separated values (.CSV), one me
 Time (hours), Measurement value (mW/g)
 
 ```text
-0.00091, -1.9514702900637e-05
-0.00644, -1.3973751238685e-05
-0.01198, -1.7136046507979e-05
-0.01751, -1.3821184267673999e-05
-0.02304, -1.531911372243e-05
-0.02857, -1.6907196236188997e-05
+0.00083, 0.25401857984425347
+0.00620, 0.253514024538131
+0.01157, 0.25587614748120296
+0.01695, 0.25589371923200854
+0.02232, 0.25738730378625135
 ... 
 ```
 
-## 
+### Example graph
+
+![Web application interface for Keithley 2000 Monitor showing a form on the left for entering filenames and sample weights for three channels, with the first channel filename and weight fields filled in. Below, a dropdown sets measurement point spacing to 20 seconds. The Run button is inactive and the Stop button is active. On the right, a line graph displays a heat flow curve with a single peak, plotting heat flow in milliwatts per gram against time in hours. The interface is clean and organized, with a neutral, scientific tone. No visible warning or error messages are present.](<Screenshot_during _run.png>)
