@@ -145,7 +145,12 @@ app.layout = dbc.Container(
                 ),
                 html.Div(
                     id="visa-error-message",
-                    style={"color": "red", "fontWeight": "bold", "marginTop": "0.5rem", "marginBottom": "1rem"},
+                    style={
+                        "color": "red",
+                        "fontWeight": "bold",
+                        "marginTop": "0.5rem",
+                        "marginBottom": "1rem",
+                    },
                 ),
             ]
         ),
@@ -301,7 +306,19 @@ app.layout = dbc.Container(
                         dbc.Card(
                             [
                                 dbc.CardBody(
-                                    [dcc.Graph(id="main-graph", figure=go.Figure())]
+                                    [
+                                        dcc.Graph(
+                                            id="main-graph",
+                                            figure=go.Figure(),
+                                            config={
+                                                "scrollZoom": True,  # Enable scroll zooming
+                                                "displayModeBar": True,  # Show the mode bar
+                                                "doubleClick": "reset",  # Double click to reset axes
+                                                "editable": False,  # Disable editing
+                                                "staticPlot": False,  # Enable interactivity
+                                            },
+                                        )
+                                    ]
                                 )
                             ]
                         )
@@ -568,12 +585,13 @@ def update_graph(n, csv_dir, filename1, filename2, filename3):
                 go.Scatter(
                     x=times,
                     y=normed,
-                    mode="lines+markers",
+                    mode="lines",
                     name=f"Channel {i+1}",
-                    line=dict(color=colors[i]),
+                    line=dict(color=colors[i], width=2),
                 )
             )
     fig.update_layout(
+        uirevision="main",  # Preserve zoom and pan on updates
         xaxis=dict(
             title="Time (h)",
             range=[0, None],
@@ -599,4 +617,4 @@ def update_graph(n, csv_dir, filename1, filename2, filename3):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=8050)
+    app.run(debug=True, port=8050)
